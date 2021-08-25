@@ -20,7 +20,10 @@ contract TDrop {
     /// @notice Total number of tokens in circulation
     uint public totalSupply = 0; 
 
-    /// @notice Address which may mint new tokens
+    /// @notice The super admin address
+    address public superAdmin;
+
+    /// @notice The admin address
     address public admin;
 
     /// @notice Address which may mint new tokens
@@ -62,6 +65,9 @@ contract TDrop {
     /// @notice A record of states for signing / validating signatures
     mapping (address => uint) public nonces;
 
+    /// @notice An event thats emitted when the super admin address is changed
+    event SuperAdminChanged(address superAdmin, address newSuperAdmin);
+
     /// @notice An event thats emitted when the admin address is changed
     event AdminChanged(address admin, address newAdmin);
 
@@ -85,7 +91,9 @@ contract TDrop {
      * @param minter_ The account with admin permission
      * @param minter_ The account with minting ability
      */
-    constructor(address admin_, address minter_) public {
+    constructor(address superAdmin_, address admin_, address minter_) public {
+        superAdmin = superAdmin_;
+        emit SuperAdminChanged(address(0), superAdmin);
         admin = admin_;
         emit AdminChanged(address(0), admin);
         minter = minter_;
@@ -95,9 +103,24 @@ contract TDrop {
 
     /**
      * @notice Change the admin address
-     * @param admin_ The address of the new admin
+     * @param superAdmin_ The address of the new super admin
      */
-    function setAdmin(address admin_) onlyAdmin external {
+    function setSuperAdmin(address superAdmin_) onlySuperAdmin external {
+        emit SuperAdminChanged(superAdmin, superAdmin_);
+        superAdmin = superAdmin_;
+    }
+
+    /**
+     * @notice Change the admin address
+     * @param admin_ The address of the new admin
+     *
+     * Only superAdmin can change the admin to avoid potential mistakes. For example, 
+     * consider a senario where the admin can call both setAdmin() and setMinter().
+     * The admin might want to call setMinter(0x0) to temporarily disable airdrop. However,
+     * due to some implementation bugs, the admin could mistakenly call setAdmin(0x0), which
+     * puts the contract into an irrecoverable state.
+     */
+    function setAdmin(address admin_) onlySuperAdmin external {
         emit AdminChanged(admin, admin_);
         admin = admin_;
     }
@@ -426,13 +449,18 @@ contract TDrop {
         return chainId;
     }
 
+    modifier onlySuperAdmin { 
+        require(msg.sender == superAdmin, "TDrop::onlySuperAdmin: only the super admin can perform this action");
+        _; 
+    }
+
     modifier onlyAdmin { 
-        require(msg.sender == admin, "TDrop::onlyAdmin: only the admin can change the admin address");
+        require(msg.sender == admin, "TDrop::onlyAdmin: only the admin can perform this action");
         _; 
     }
 
     modifier onlyMinter { 
-        require(msg.sender == minter, "TDrop::onlyMinter: only the admin can change the admin address");
+        require(msg.sender == minter, "TDrop::onlyMinter: only the admin can perform this action");
         _; 
     }
 
