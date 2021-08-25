@@ -26,9 +26,6 @@ contract TDrop {
     /// @notice Address which may mint new tokens
     address public minter;
 
-    /// @notice The timestamp after which minting may occur
-    uint public mintingAllowedAfter;
-
     /// @notice if the token is allowed to be transferred
     bool public paused;
 
@@ -85,20 +82,14 @@ contract TDrop {
 
     /**
      * @notice Construct a new TDrop token
-     * @param account The initial account to grant all the tokens
+     * @param minter_ The account with admin permission
      * @param minter_ The account with minting ability
-     * @param mintingAllowedAfter_ The timestamp after which minting may occur
      */
-    constructor(address account, address admin_, address minter_, uint mintingAllowedAfter_) public {
-        require(mintingAllowedAfter_ >= block.timestamp, "TDrop::constructor: minting can only begin after deployment");
-
+    constructor(address admin_, address minter_) public {
         admin = admin_;
         emit AdminChanged(address(0), admin);
-        balances[account] = uint96(totalSupply);
-        emit Transfer(address(0), account, totalSupply);
         minter = minter_;
         emit MinterChanged(address(0), minter);
-        mintingAllowedAfter = mintingAllowedAfter_;
         paused = true;
     }
 
@@ -139,8 +130,7 @@ contract TDrop {
      * @param dst The address of the destination account
      * @param rawAmount The number of tokens to be minted
      */
-    function mint(address dst, uint rawAmount) onlyMinter external {
-        require(block.timestamp >= mintingAllowedAfter, "TDrop::mint: minting not allowed yet");
+    function _mint(address dst, uint rawAmount) onlyMinter internal {
         require(dst != address(0), "TDrop::mint: cannot transfer to the zero address");
 
         // mint the amount
@@ -167,7 +157,7 @@ contract TDrop {
         for (uint i = 0; i < numDsts; i ++) {
             address dst = dsts[i];
             uint rawAmount = rawAmounts[i];
-            this.mint(dst, rawAmount);
+            _mint(dst, rawAmount);
         }
     }
 

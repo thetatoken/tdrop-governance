@@ -31,5 +31,5 @@ npx hardhat test --network theta_privatenet
 Run an individual test
 
 ```
-npx hardhat test tests/tdrop.js --network theta_privatenet
+npx hardhat test test/TDrop.js --network theta_privatenet
 ```

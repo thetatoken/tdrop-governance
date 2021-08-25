@@ -8,6 +8,9 @@ module.exports = {
   
   defaultNetwork: "theta_privatenet",
   networks: {
+    ganache: {
+      url: "http://localhost:8545",
+    },
     theta_privatenet: {
       url: "http://localhost:18888/rpc",
       accounts: [
