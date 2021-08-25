@@ -26,8 +26,11 @@ contract TDrop {
     /// @notice The admin address
     address public admin;
 
-    /// @notice Address which may mint new tokens
-    address public minter;
+    /// @notice Address which may airdrop new tokens
+    address public airdropper;
+
+    /// @notice The liquidity miner address (i.e., the marketplace contract address)
+    address public liquidityMiner;
 
     /// @notice if the token is allowed to be transferred
     bool public paused;
@@ -71,8 +74,11 @@ contract TDrop {
     /// @notice An event thats emitted when the admin address is changed
     event AdminChanged(address admin, address newAdmin);
 
-    /// @notice An event thats emitted when the minter address is changed
-    event MinterChanged(address minter, address newMinter);
+    /// @notice An event thats emitted when the airdropper address is changed
+    event AirdropperChanged(address airdropper, address newAirdropper);
+
+    /// @notice An event thats emitted when the liquidityMiner address is changed
+    event LiquidityMinerChanged(address liquidityMiner, address newLiquidityMiner);
 
     /// @notice An event thats emitted when an account changes its delegate
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
@@ -88,16 +94,17 @@ contract TDrop {
 
     /**
      * @notice Construct a new TDrop token
-     * @param minter_ The account with admin permission
-     * @param minter_ The account with minting ability
+     * @param superAdmin_ The account with super admin permission
+     * @param admin_ The account with admin permission
+     * @param airdropper_ The account with token air dropping ability
      */
-    constructor(address superAdmin_, address admin_, address minter_) public {
+    constructor(address superAdmin_, address admin_, address airdropper_) public {
         superAdmin = superAdmin_;
         emit SuperAdminChanged(address(0), superAdmin);
         admin = admin_;
         emit AdminChanged(address(0), admin);
-        minter = minter_;
-        emit MinterChanged(address(0), minter);
+        airdropper = airdropper_;
+        emit AirdropperChanged(address(0), airdropper);
         paused = true;
     }
 
@@ -115,8 +122,8 @@ contract TDrop {
      * @param admin_ The address of the new admin
      *
      * Only superAdmin can change the admin to avoid potential mistakes. For example, 
-     * consider a senario where the admin can call both setAdmin() and setMinter().
-     * The admin might want to call setMinter(0x0) to temporarily disable airdrop. However,
+     * consider a senario where the admin can call both setAdmin() and setAirdropper().
+     * The admin might want to call setAirdropper(0x0) to temporarily disable airdrop. However,
      * due to some implementation bugs, the admin could mistakenly call setAdmin(0x0), which
      * puts the contract into an irrecoverable state.
      */
@@ -126,12 +133,21 @@ contract TDrop {
     }
 
     /**
-     * @notice Change the minter address
-     * @param minter_ The address of the new minter
+     * @notice Change the airdropper address
+     * @param airdropper_ The address of the new airdropper
      */
-    function setMinter(address minter_) onlyAdmin external {
-        emit MinterChanged(minter, minter_);
-        minter = minter_;
+    function setAirdropper(address airdropper_) onlyAdmin external {
+        emit AirdropperChanged(airdropper, airdropper_);
+        airdropper = airdropper_;
+    }
+
+    /**
+     * @notice Change the liquidity miner address
+     * @param liquidityMiner_ The address of the new liquidity miner
+     */
+    function setLiquidityMiner(address liquidityMiner_) onlyAdmin external {
+        emit LiquidityMinerChanged(liquidityMiner, liquidityMiner_);
+        liquidityMiner = liquidityMiner_;
     }
 
     /**
@@ -153,7 +169,7 @@ contract TDrop {
      * @param dst The address of the destination account
      * @param rawAmount The number of tokens to be minted
      */
-    function _mint(address dst, uint rawAmount) onlyMinter internal {
+    function _mint(address dst, uint rawAmount) onlyMinters internal {
         require(dst != address(0), "TDrop::mint: cannot transfer to the zero address");
 
         // mint the amount
@@ -174,7 +190,7 @@ contract TDrop {
      * @param dsts The addresses of the destination accounts
      * @param rawAmounts The number of tokens to be airdropped to each destination account
      */
-    function airdrop(address[] calldata dsts, uint[] calldata rawAmounts) onlyMinter external {
+    function airdrop(address[] calldata dsts, uint[] calldata rawAmounts) onlyAirdropper external {
         require(dsts.length == rawAmounts.length);
         uint numDsts = dsts.length;
         for (uint i = 0; i < numDsts; i ++) {
@@ -459,8 +475,13 @@ contract TDrop {
         _; 
     }
 
-    modifier onlyMinter { 
-        require(msg.sender == minter, "TDrop::onlyMinter: only the admin can perform this action");
+    modifier onlyAirdropper { 
+        require(msg.sender == airdropper, "TDrop::onlyAirdropper: only the airdropper can perform this action");
+        _; 
+    }
+
+    modifier onlyMinters { 
+        require(msg.sender == airdropper || msg.sender == liquidityMiner, "TDrop::onlyMinters: only the minters can perform this action");
         _; 
     }
 
