@@ -29,6 +29,9 @@ contract TDrop {
     /// @notice The timestamp after which minting may occur
     uint public mintingAllowedAfter;
 
+    /// @notice if the token is allowed to be transferred
+    bool public paused;
+
     /// @notice Allowance amounts on behalf of others
     mapping (address => mapping (address => uint96)) internal allowances;
 
@@ -86,24 +89,24 @@ contract TDrop {
      * @param minter_ The account with minting ability
      * @param mintingAllowedAfter_ The timestamp after which minting may occur
      */
-    constructor(address account, address minter_, uint mintingAllowedAfter_) public {
+    constructor(address account, address admin_, address minter_, uint mintingAllowedAfter_) public {
         require(mintingAllowedAfter_ >= block.timestamp, "TDrop::constructor: minting can only begin after deployment");
 
-        admin = msg.sender;
+        admin = admin_;
         emit AdminChanged(address(0), admin);
         balances[account] = uint96(totalSupply);
         emit Transfer(address(0), account, totalSupply);
         minter = minter_;
         emit MinterChanged(address(0), minter);
         mintingAllowedAfter = mintingAllowedAfter_;
+        paused = true;
     }
 
     /**
      * @notice Change the admin address
      * @param admin_ The address of the new admin
      */
-    function setAdmin(address admin_) external {
-        require(msg.sender == admin, "TDrop::setMinter: only the admin can change the admin address");
+    function setAdmin(address admin_) onlyAdmin external {
         emit AdminChanged(admin, admin_);
         admin = admin_;
     }
@@ -112,10 +115,23 @@ contract TDrop {
      * @notice Change the minter address
      * @param minter_ The address of the new minter
      */
-    function setMinter(address minter_) external {
-        require(msg.sender == admin, "TDrop::setMinter: only the admin can change the minter address");
+    function setMinter(address minter_) onlyAdmin external {
         emit MinterChanged(minter, minter_);
         minter = minter_;
+    }
+
+    /**
+     * @notice Pause token transfer
+     */
+    function pause() onlyAdmin external {
+        paused = true;
+    }
+
+    /**
+     * @notice Unpause token transfer
+     */
+    function unpause() onlyAdmin external {
+        paused = false;
     }
 
     /**
@@ -123,8 +139,7 @@ contract TDrop {
      * @param dst The address of the destination account
      * @param rawAmount The number of tokens to be minted
      */
-    function mint(address dst, uint rawAmount) external {
-        require(msg.sender == minter, "TDrop::mint: only the minter can mint");
+    function mint(address dst, uint rawAmount) onlyMinter external {
         require(block.timestamp >= mintingAllowedAfter, "TDrop::mint: minting not allowed yet");
         require(dst != address(0), "TDrop::mint: cannot transfer to the zero address");
 
@@ -146,7 +161,7 @@ contract TDrop {
      * @param dsts The addresses of the destination accounts
      * @param rawAmounts The number of tokens to be airdropped to each destination account
      */
-    function airdrop(address[] calldata dsts, uint[] calldata rawAmounts) external {
+    function airdrop(address[] calldata dsts, uint[] calldata rawAmounts) onlyMinter external {
         require(dsts.length == rawAmounts.length);
         uint numDsts = dsts.length;
         for (uint i = 0; i < numDsts; i ++) {
@@ -352,7 +367,7 @@ contract TDrop {
         _moveDelegates(currentDelegate, delegatee, delegatorBalance);
     }
 
-    function _transferTokens(address src, address dst, uint96 amount) internal {
+    function _transferTokens(address src, address dst, uint96 amount) onlyWhenUnpaused internal {
         require(src != address(0), "TDrop::_transferTokens: cannot transfer from the zero address");
         require(dst != address(0), "TDrop::_transferTokens: cannot transfer to the zero address");
 
@@ -419,5 +434,20 @@ contract TDrop {
         uint256 chainId;
         assembly { chainId := chainid() }
         return chainId;
+    }
+
+    modifier onlyAdmin { 
+        require(msg.sender == admin, "TDrop::onlyAdmin: only the admin can change the admin address");
+        _; 
+    }
+
+    modifier onlyMinter { 
+        require(msg.sender == minter, "TDrop::onlyMinter: only the admin can change the admin address");
+        _; 
+    }
+
+    modifier onlyWhenUnpaused {
+        require(!paused, "TDrop::onlyWhenUnpaused: token is paused");
+        _;
     }
 }
