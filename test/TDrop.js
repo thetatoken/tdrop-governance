@@ -13,7 +13,7 @@ describe("TDrop Token Contract", function () {
     TDropToken = await ethers.getContractFactory("TDrop");
     [deployer, superAdmin, admin, airdropper, ...addrs] = await ethers.getSigners();
 
-    tdropToken = await TDropToken.deploy(superAdmin.address, admin.address, airdropper.address);
+    tdropToken = await TDropToken.deploy(superAdmin.address, admin.address);
     await tdropToken.deployed();
   });
 
@@ -23,7 +23,7 @@ describe("TDrop Token Contract", function () {
     it("Should correctly initialize the TDrop token", async function () {
       expect(await tdropToken.superAdmin()).to.equal(superAdmin.address);
       expect(await tdropToken.admin()).to.equal(admin.address);
-      expect(await tdropToken.airdropper()).to.equal(airdropper.address);
+      expect(await tdropToken.airdropper()).to.equal("0x0000000000000000000000000000000000000000");
       expect(await tdropToken.totalSupply()).to.equal(0);
       expect(await tdropToken.paused()).to.equal(true);
     });

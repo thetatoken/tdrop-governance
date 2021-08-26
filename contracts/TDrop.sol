@@ -17,8 +17,26 @@ contract TDrop {
     // Note that 2**96 > 20 * 10**9 * 10**18, therefore it is safe to use uint96 to represent the TDrop token (2**96/10**18 is roughly 79 billion).
     uint public maxSupply = 20_000_000_000e18; // 20 billion TDrop. 
 
+    /// @notice Max token minted through airdrop
+    uint public maxAirdrop = 10_000_000_000e18; // 10 billion TDrop. 
+
+    /// @notice Max token minted for staking reward
+    uint public maxStakeReward = 4_000_000_000e18; // 4 billion TDrop. 
+
+    /// @notice Max token minted through liquidity mining
+    uint public maxLiquidityMiningReward = 6_000_000_000e18; // 6 billion TDrop. 
+
     /// @notice Total number of tokens in circulation
     uint public totalSupply = 0; 
+
+    /// @notice Accumulated token minted through airdrop
+    uint public airdropAccumulated = 0;
+
+    /// @notice Accumulated token minted for staking reward
+    uint public stakeRewardAccumulated = 0;
+
+    /// @notice Accumulated token minted through liquidity mining
+    uint public liquidityMiningAccumulated = 0;
 
     /// @notice The super admin address
     address public superAdmin;
@@ -96,15 +114,12 @@ contract TDrop {
      * @notice Construct a new TDrop token
      * @param superAdmin_ The account with super admin permission
      * @param admin_ The account with admin permission
-     * @param airdropper_ The account with token air dropping ability
      */
-    constructor(address superAdmin_, address admin_, address airdropper_) public {
+    constructor(address superAdmin_, address admin_) public {
         superAdmin = superAdmin_;
         emit SuperAdminChanged(address(0), superAdmin);
         admin = admin_;
         emit AdminChanged(address(0), admin);
-        airdropper = airdropper_;
-        emit AirdropperChanged(address(0), airdropper);
         paused = true;
     }
 
@@ -196,7 +211,15 @@ contract TDrop {
         for (uint i = 0; i < numDsts; i ++) {
             address dst = dsts[i];
             uint rawAmount = rawAmounts[i];
+            if (rawAmount == 0) {
+                continue;
+            }
+
             _mint(dst, rawAmount);
+
+            uint96 amount = safe96(rawAmount, "TDrop::airdrop: amount exceeds 96 bits");
+            airdropAccumulated = safe96(SafeMath.add(airdropAccumulated, amount), "TDrop::airdrop: airdropAccumulated exceeds 96 bits");
+            require(airdropAccumulated <= maxAirdrop, "TDrop::airdrop: accumlated airdrop token exceeds the max");
         }
     }
 
