@@ -3,7 +3,8 @@ const { expect } = require('chai');
 const { ZERO_ADDRESS } = constants;
 
 describe('TDrop Token TNT20 Basics', function () {
-  
+  this.timeout(100000); 
+
   const name = 'TDrop Token';
   const symbol = 'TDROP';
   const initialSupply = 100;
@@ -229,7 +230,7 @@ describe('TDrop Token TNT20 Basics', function () {
   
         it('transfers the requested amount', async function () {
           const to = recipient;
-          this.token.connect(initialHolder).transfer(to.address, amount)
+          await this.token.connect(initialHolder).transfer(to.address, amount)
   
           expect(await this.token.balanceOf(initialHolder.address)).to.be.equal(initialSupply);  
           expect(await this.token.balanceOf(to.address)).to.be.equal(0);
