@@ -3,9 +3,9 @@ pragma experimental ABIEncoderV2;
 
 import "./SafeMath.sol";
 
-contract TDrop {
+contract TDropToken {
     /// @notice EIP-20 token name for this token
-    string public constant name = "TDrop";
+    string public constant name = "TDrop Token";
 
     /// @notice EIP-20 token symbol for this token
     string public constant symbol = "TDROP";
@@ -198,6 +198,19 @@ contract TDrop {
 
         // move delegates
         _moveDelegates(address(0), delegates[dst], amount);
+    }
+
+    /**
+     * @notice Mine new tokens through liquidity mining, only the liquidity miner, i.e. the marketplace contract can call this method
+     * @param dst The address of the destination account
+     * @param rawAmount The number of tokens to be minted
+     */
+    function mine(address dst, uint rawAmount) onlyLiquidityMiner external {
+        _mint(dst, rawAmount);
+
+        uint96 amount = safe96(rawAmount, "TDrop::mine: amount exceeds 96 bits");
+        liquidityMiningAccumulated = safe96(SafeMath.add(liquidityMiningAccumulated, amount), "TDrop::mine: liquidityMiningAccumulated exceeds 96 bits");
+        require(liquidityMiningAccumulated <= maxLiquidityMiningReward, "TDrop::mine: accumlated airdrop token exceeds the max");
     }
 
     /**
@@ -495,6 +508,11 @@ contract TDrop {
 
     modifier onlyAdmin { 
         require(msg.sender == admin, "TDrop::onlyAdmin: only the admin can perform this action");
+        _; 
+    }
+
+    modifier onlyLiquidityMiner { 
+        require(msg.sender == liquidityMiner, "TDrop::onlyLiquidityMiner: only the liquidity miner can perform this action");
         _; 
     }
 

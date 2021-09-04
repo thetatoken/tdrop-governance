@@ -31,7 +31,7 @@ Next, in another terminal, run the tests with
 npx hardhat test --network ganache
 
 # run an individual test
-npx hardhat test test/TDrop.js --network ganache
+npx hardhat test test/02-tdrop-token-special-features.js --network ganache
 ```
 
 ### Test against the Theta local privatenet
@@ -47,5 +47,5 @@ Next, run the test suite with
 npx hardhat test --network theta_privatenet
 
 # run an individual test
-npx hardhat test test/TDrop.js --network theta_privatenet
+npx hardhat test test/02-tdrop-token-special-features.js --network theta_privatenet
 ```

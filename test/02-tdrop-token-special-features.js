@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 
-describe("TDrop Token Contract", function () {
+describe("TDrop Token Special Features", function () {
 
   let TDropToken;
   let tdropToken;
@@ -10,7 +10,7 @@ describe("TDrop Token Contract", function () {
   let addrs;
 
   beforeEach(async function () {
-    TDropToken = await ethers.getContractFactory("TDrop");
+    TDropToken = await ethers.getContractFactory("TDropToken");
     [deployer, superAdmin, admin, airdropper, ...addrs] = await ethers.getSigners();
 
     tdropToken = await TDropToken.deploy(superAdmin.address, admin.address);

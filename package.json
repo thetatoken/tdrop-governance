@@ -32,6 +32,7 @@
     "husky": "^4.2.5"
   },
   "dependencies": {
+    "@openzeppelin/test-helpers": "^0.5.13",
     "solc": "^0.5.16"
   }
 }
