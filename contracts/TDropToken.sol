@@ -254,7 +254,7 @@ contract TDropToken {
      * @param rawAmount The number of tokens that are approved (2^256-1 means infinite)
      * @return Whether or not the approval succeeded
      */
-    function approve(address spender, uint rawAmount) external returns (bool) {
+    function approve(address spender, uint rawAmount) onlyWhenUnpaused external returns (bool) {
         uint96 amount;
         if (rawAmount == uint(-1)) {
             amount = uint96(-1);
