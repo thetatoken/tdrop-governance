@@ -22,6 +22,9 @@ contract TDropStaking {
     /// @notice if the token is allowed to be transferred
     bool public paused;
 
+    /// @notice last block height that staking reward has been issued
+    uint public lastRewardMintHeight = 111; // TODO: set proper initial value
+
     /// @notice Total number of shares
     uint public totalShares = 0; 
 
@@ -128,6 +131,18 @@ contract TDropStaking {
         return tdrop.balanceOf(address(this));
     }
 
+    /**
+     * @notice Mint staking reward up to current block height
+     */
+    function updateReward() private {
+        if (lastRewardMintHeight >= block.number) {
+            return;
+        }
+
+        uint96 amount = safe96(SafeMath.mul(tdropParams.stakingRewardPerBlock(), SafeMath.sub(block.number, lastRewardMintHeight)), "TDrop::stake: reward amount exceeds 96 bits");
+
+        tdrop.stakeReward(address(this), amount);
+    }
 
     /**
      * @notice Stake TDrop
@@ -135,6 +150,9 @@ contract TDropStaking {
      */
     function stake(uint rawAmount) external returns (uint) {
         uint96 amount = safe96(rawAmount, "TDrop::stake: amount exceeds 96 bits");
+
+        // Make sure reward is up-to-date so that share price is accurate.
+        updateReward();
 
         uint prevBalance = poolBalance();
 
@@ -356,6 +374,7 @@ interface TDrop {
     function balanceOf(address account) external view returns (uint);
     function transfer(address dst, uint rawAmount) external returns (bool);
     function transferFrom(address src, address dst, uint rawAmount) external returns (bool);
+    function stakeReward(address dst, uint rawAmount) external;
 }
 
 interface TDropParams {
