@@ -138,6 +138,7 @@ contract TDropStaking {
         if (lastRewardMintHeight >= block.number) {
             return;
         }
+        lastRewardMintHeight = block.number;
 
         uint96 amount = safe96(SafeMath.mul(tdropParams.stakingRewardPerBlock(), SafeMath.sub(block.number, lastRewardMintHeight)), "TDrop::stake: reward amount exceeds 96 bits");
 
@@ -182,6 +183,8 @@ contract TDropStaking {
     function unstake(uint rawShares) external returns (uint) {
         require(rawShares < shares[msg.sender], "TDrop::unstake: amount exceeds balance");
         require(rawShares > 0, "TDrop::unstake: invalid amount");
+
+        updateReward();
 
         uint96 sharesAmount = safe96(rawShares, "TDrop::stake: amount exceeds 96 bits");
 

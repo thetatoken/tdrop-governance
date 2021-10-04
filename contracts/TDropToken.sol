@@ -406,7 +406,7 @@ contract TDropToken {
     }
 
     modifier onlyMinters { 
-        require(msg.sender == airdropper || msg.sender == liquidityMiner, "TDrop::onlyMinters: only the minters can perform this action");
+        require(msg.sender == airdropper || msg.sender == liquidityMiner || msg.sender == stakingPool, "TDrop::onlyMinters: only the minters can perform this action");
         _; 
     }
 
