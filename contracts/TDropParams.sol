@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import "./SafeMath.sol";
 
-contract TDropStaking {
+contract TDropParams {
     /// @notice The super admin address
     address public superAdmin;
 

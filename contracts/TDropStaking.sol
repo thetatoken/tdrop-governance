@@ -8,10 +8,10 @@ contract TDropStaking {
     string public constant name = "TDrop Staking";
 
       /// @notice The TDrop contract
-    TDrop public tdrop;
+    ITDrop public tdrop;
 
     /// @notice The TDropParams contract
-    TDropParams public tdropParams;
+    ITDropParams public tdropParams;
 
     /// @notice The super admin address
     address public superAdmin;
@@ -80,8 +80,8 @@ contract TDropStaking {
         admin = admin_;
         emit AdminChanged(address(0), admin);
         
-        tdrop = TDrop(tdrop_);
-        tdropParams = TDropParams(tdropParams_);
+        tdrop = ITDrop(tdrop_);
+        tdropParams = ITDropParams(tdropParams_);
 
         paused = true;
     }
@@ -373,13 +373,13 @@ contract TDropStaking {
     }
 }
 
-interface TDrop {
+interface ITDrop {
     function balanceOf(address account) external view returns (uint);
     function transfer(address dst, uint rawAmount) external returns (bool);
     function transferFrom(address src, address dst, uint rawAmount) external returns (bool);
     function stakeReward(address dst, uint rawAmount) external;
 }
 
-interface TDropParams {
+interface ITDropParams {
     function stakingRewardPerBlock() external view returns (uint);
 }
