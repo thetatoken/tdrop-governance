@@ -138,9 +138,9 @@ contract TDropStaking {
         if (lastRewardMintHeight >= block.number) {
             return;
         }
-        lastRewardMintHeight = block.number;
-
         uint96 amount = safe96(SafeMath.mul(tdropParams.stakingRewardPerBlock(), SafeMath.sub(block.number, lastRewardMintHeight)), "TDrop::stake: reward amount exceeds 96 bits");
+
+        lastRewardMintHeight = block.number;
 
         tdrop.stakeReward(address(this), amount);
     }
