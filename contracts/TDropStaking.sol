@@ -23,7 +23,7 @@ contract TDropStaking {
     bool public paused;
 
     /// @notice last block height that staking reward has been issued
-    uint public lastRewardMintHeight = 111; // TODO: set proper initial value
+    uint public lastRewardMintHeight = 10000000; // TODO: set proper initial value
 
     /// @notice Total number of shares
     uint public totalShares = 0; 
@@ -138,7 +138,7 @@ contract TDropStaking {
         if (lastRewardMintHeight >= block.number) {
             return;
         }
-        uint96 amount = safe96(SafeMath.mul(tdropParams.stakingRewardPerBlock(), SafeMath.sub(block.number, lastRewardMintHeight)), "TDrop::stake: reward amount exceeds 96 bits");
+        uint96 amount = safe96(SafeMath.mul(tdropParams.stakingRewardPerBlock(), SafeMath.sub(block.number, lastRewardMintHeight)), "TDropStaking::stake: reward amount exceeds 96 bits");
 
         lastRewardMintHeight = block.number;
 
@@ -149,8 +149,8 @@ contract TDropStaking {
      * @notice Stake TDrop
      * @param rawAmount The number of tokens to be staked
      */
-    function stake(uint rawAmount) external returns (uint) {
-        uint96 amount = safe96(rawAmount, "TDrop::stake: amount exceeds 96 bits");
+    function stake(uint rawAmount) onlyWhenUnpaused external returns (uint) {
+        uint96 amount = safe96(rawAmount, "TDropStaking::stake: amount exceeds 96 bits");
 
         // Make sure reward is up-to-date so that share price is accurate.
         updateReward();
@@ -164,11 +164,11 @@ contract TDropStaking {
         if (totalShares == 0) {
             newShares = amount;
         } else {
-            newShares = safe96(SafeMath.div(SafeMath.mul(totalShares, amount), prevBalance), "TDrop::stake: totalSupply exceeds 96 bits");
+            newShares = safe96(SafeMath.div(SafeMath.mul(totalShares, amount), prevBalance), "TDropStaking::stake: totalSupply exceeds 96 bits");
         }
 
-        totalShares = safe96(SafeMath.add(totalShares, newShares), "TDrop::stake: totalSupply exceeds 96 bits");
-        shares[msg.sender] = safe96(SafeMath.add(shares[msg.sender], newShares), "TDrop::stake: amount exceeds 96 bits");
+        totalShares = safe96(SafeMath.add(totalShares, newShares), "TDropStaking::stake: totalSupply exceeds 96 bits");
+        shares[msg.sender] = safe96(SafeMath.add(shares[msg.sender], newShares), "TDropStaking::stake: amount exceeds 96 bits");
 
         // move delegates
         _moveDelegates(address(0), delegates[msg.sender], newShares);
@@ -180,18 +180,18 @@ contract TDropStaking {
      * @notice Unstake TDrop
      * @param rawShares The number of shares to be unstaked
      */
-    function unstake(uint rawShares) external returns (uint) {
-        require(rawShares < shares[msg.sender], "TDrop::unstake: amount exceeds balance");
-        require(rawShares > 0, "TDrop::unstake: invalid amount");
+    function unstake(uint rawShares) onlyWhenUnpaused external returns (uint) {
+        require(rawShares <= shares[msg.sender], "TDropStaking::unstake: amount exceeds balance");
+        require(rawShares > 0, "TDropStaking::unstake: invalid amount");
 
         updateReward();
 
-        uint96 sharesAmount = safe96(rawShares, "TDrop::stake: amount exceeds 96 bits");
+        uint96 sharesAmount = safe96(rawShares, "TDropStaking::stake: amount exceeds 96 bits");
 
-        uint amount  = safe96(SafeMath.div(SafeMath.mul(poolBalance(), sharesAmount), totalShares), "TDrop::unstake: invalid output amount");
+        uint amount  = safe96(SafeMath.div(SafeMath.mul(poolBalance(), sharesAmount), totalShares), "TDropStaking::unstake: invalid output amount");
 
-        shares[msg.sender] = safe96(SafeMath.sub(shares[msg.sender], sharesAmount), "TDrop::unstake: invalid output shares");
-        totalShares = safe96(SafeMath.sub(totalShares, sharesAmount), "TDrop::unstake: invalid total shares");
+        shares[msg.sender] = safe96(SafeMath.sub(shares[msg.sender], sharesAmount), "TDropStaking::unstake: invalid output shares");
+        totalShares = safe96(SafeMath.sub(totalShares, sharesAmount), "TDropStaking::unstake: invalid total shares");
 
         // move delegates
         _moveDelegates(delegates[msg.sender], address(0), sharesAmount);
@@ -232,9 +232,9 @@ contract TDropStaking {
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "TDrop::delegateBySig: invalid signature");
-        require(nonce == nonces[signatory]++, "TDrop::delegateBySig: invalid nonce");
-        require(now <= expiry, "TDrop::delegateBySig: signature expired");
+        require(signatory != address(0), "TDropStaking::delegateBySig: invalid signature");
+        require(nonce == nonces[signatory]++, "TDropStaking::delegateBySig: invalid nonce");
+        require(now <= expiry, "TDropStaking::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
     }
 
@@ -256,7 +256,7 @@ contract TDropStaking {
      * @return The number of votes the account had as of the given block
      */
     function getPriorVotes(address account, uint blockNumber) public view returns (uint96) {
-        require(blockNumber < block.number, "TDrop::getPriorVotes: not yet determined");
+        require(blockNumber < block.number, "TDropStaking::getPriorVotes: not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
@@ -304,21 +304,21 @@ contract TDropStaking {
             if (srcRep != address(0)) {
                 uint32 srcRepNum = numCheckpoints[srcRep];
                 uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-                uint96 srcRepNew = sub96(srcRepOld, amount, "TDrop::_moveVotes: vote amount underflows");
+                uint96 srcRepNew = sub96(srcRepOld, amount, "TDropStaking::_moveVotes: vote amount underflows");
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
 
             if (dstRep != address(0)) {
                 uint32 dstRepNum = numCheckpoints[dstRep];
                 uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-                uint96 dstRepNew = add96(dstRepOld, amount, "TDrop::_moveVotes: vote amount overflows");
+                uint96 dstRepNew = add96(dstRepOld, amount, "TDropStaking::_moveVotes: vote amount overflows");
                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
             }
         }
     }
 
     function _writeCheckpoint(address delegatee, uint32 nCheckpoints, uint96 oldVotes, uint96 newVotes) internal {
-      uint32 blockNumber = safe32(block.number, "TDrop::_writeCheckpoint: block number exceeds 32 bits");
+      uint32 blockNumber = safe32(block.number, "TDropStaking::_writeCheckpoint: block number exceeds 32 bits");
 
       if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
           checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
@@ -358,17 +358,17 @@ contract TDropStaking {
     }
 
     modifier onlySuperAdmin { 
-        require(msg.sender == superAdmin, "TDrop::onlySuperAdmin: only the super admin can perform this action");
+        require(msg.sender == superAdmin, "TDropStaking::onlySuperAdmin: only the super admin can perform this action");
         _; 
     }
 
     modifier onlyAdmin { 
-        require(msg.sender == admin, "TDrop::onlyAdmin: only the admin can perform this action");
+        require(msg.sender == admin, "TDropStaking::onlyAdmin: only the admin can perform this action");
         _; 
     }
 
     modifier onlyWhenUnpaused {
-        require(!paused, "TDrop::onlyWhenUnpaused: token is paused");
+        require(!paused, "TDropStaking::onlyWhenUnpaused: token is paused");
         _;
     }
 }

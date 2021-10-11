@@ -11,7 +11,7 @@ contract TDropParams {
     address public admin;
 
     /// @notice The staking reward per block
-    uint public stakingRewardPerBlock = 16; // TODO: set a proper initial value
+    uint public stakingRewardPerBlock = 100; // TODO: set a proper initial value
 
     /// @notice An event thats emitted when the super admin address is changed
     event SuperAdminChanged(address superAdmin, address newSuperAdmin);
