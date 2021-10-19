@@ -203,6 +203,100 @@ describe("TDrop Staking", function () {
         });
     });
 
+    describe("Votes", function () {
+        this.timeout(50000);
+
+        beforeEach(async () => {
+            await tdropStaking.connect(admin).unpause();
+        });
+
+        it("votes should go to delegatee", async function () {
+            let alice = addrs[2];
+            let bob = addrs[3];
+            let carol = addrs[4];
+            let amount = 10000;
+
+            await expect(tdropToken.connect(airdropper).airdrop([alice.address, bob.address], [amount, amount]));
+
+            await tdropToken.connect(alice).approve(tdropStaking.address, 100);
+            await tdropStaking.connect(alice).stake(100);
+
+            // Have zero votes before delegation
+            expect(await tdropStaking.getCurrentVotes(alice.address)).to.be.equal(0);
+            expect(await tdropStaking.getCurrentVotes(carol.address)).to.be.equal(0);
+
+            await tdropStaking.connect(alice).delegate(carol.address);
+
+            // Votes go to delegatee
+            expect(await tdropStaking.getCurrentVotes(alice.address)).to.be.equal(0);
+            expect(await tdropStaking.getCurrentVotes(carol.address)).to.be.equal(100);
+        });
+
+        it("votes should be removed after unstake", async function () {
+            let alice = addrs[2];
+            let bob = addrs[3];
+            let carol = addrs[4];
+            let amount = 10000;
+
+            await expect(tdropToken.connect(airdropper).airdrop([alice.address, bob.address], [amount, amount]));
+
+            await tdropToken.connect(alice).approve(tdropStaking.address, 100);
+            await tdropStaking.connect(alice).stake(100);
+
+            // Have zero votes before delegation
+            expect(await tdropStaking.getCurrentVotes(alice.address)).to.be.equal(0);
+            expect(await tdropStaking.getCurrentVotes(carol.address)).to.be.equal(0);
+
+            await tdropStaking.connect(alice).delegate(carol.address);
+
+            // Votes go to delegatee
+            expect(await tdropStaking.getCurrentVotes(alice.address)).to.be.equal(0);
+            expect(await tdropStaking.getCurrentVotes(carol.address)).to.be.equal(100);
+
+            // Unstake should remove votes
+            await tdropStaking.connect(alice).unstake(77);
+            expect(await tdropStaking.getCurrentVotes(alice.address)).to.be.equal(0);
+            expect(await tdropStaking.getCurrentVotes(carol.address)).to.be.equal(23);
+        });
+
+        it("delegatee can be shared", async function () {
+            let alice = addrs[2];
+            let bob = addrs[3];
+            let carol = addrs[4];
+            let amount = 10000;
+
+            await expect(tdropToken.connect(airdropper).airdrop([alice.address, bob.address], [amount, amount]));
+
+            await tdropToken.connect(alice).approve(tdropStaking.address, 100);
+            await tdropStaking.connect(alice).stake(100);
+            await tdropToken.connect(bob).approve(tdropStaking.address, 100);
+            await tdropStaking.connect(bob).stake(100);
+
+            // Have zero votes before delegation
+            expect(await tdropStaking.getCurrentVotes(alice.address)).to.be.equal(0);
+            expect(await tdropStaking.getCurrentVotes(carol.address)).to.be.equal(0);
+
+            // Alice delegate
+            await tdropStaking.connect(alice).delegate(carol.address);
+
+            // Votes go to delegatee
+            expect(await tdropStaking.getCurrentVotes(alice.address)).to.be.equal(0);
+            expect(await tdropStaking.getCurrentVotes(carol.address)).to.be.equal(100);
+
+            // Bob delegate
+            await tdropStaking.connect(bob).delegate(carol.address);
+
+            expect(await tdropStaking.getCurrentVotes(alice.address)).to.be.equal(0);
+            expect(await tdropStaking.getCurrentVotes(carol.address)).to.be.equal(200);
+
+            // Unstake should remove votes
+            await tdropStaking.connect(alice).unstake(100);
+            expect(await tdropStaking.getCurrentVotes(alice.address)).to.be.equal(0);
+            expect(await tdropStaking.getCurrentVotes(bob.address)).to.be.equal(0);
+            expect(await tdropStaking.getCurrentVotes(carol.address)).to.be.equal(100);
+        });
+    });
+
     describe("Pause Token", function () {
         this.timeout(50000);
 
@@ -219,9 +313,9 @@ describe("TDrop Staking", function () {
             await expect(tdropStaking.connect(recipient1).stake(100)).to.be.revertedWith('TDropStaking::onlyWhenUnpaused: token is paused');
 
             await tdropStaking.connect(admin).unpause();
-            
+
             await tdropStaking.connect(recipient1).stake(100);
-            
+
             expect(await tdropToken.balanceOf(recipient1.address)).to.be.equal(amount1 - 100);
             expect(await tdropStaking.balanceOf(recipient1.address)).to.be.equal(100);
 
