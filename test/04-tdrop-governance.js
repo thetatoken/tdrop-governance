@@ -75,7 +75,7 @@ describe("TDrop Governance", function () {
     });
 
 
-    it("should be able to execute proposal to update metapool.redeemer", async function () {
+    it("should be able to execute proposal to update tdropParams.stakingRewardPerBlock", async function () {
         let alice = addrs[2];
         let amount = expandTo18Decimals(123e7);
 
@@ -116,7 +116,7 @@ describe("TDrop Governance", function () {
         expect(await tdropParams.stakingRewardPerBlock()).to.eq(789);
     });
 
-    it("should be update to update timelock itself", async function () {
+    it("should be able to update timelock itself", async function () {
         let alice = addrs[2];
         let amount = expandTo18Decimals(123e7);
 
