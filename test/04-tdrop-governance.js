@@ -3,6 +3,7 @@ const { BigNumber } = require("@ethersproject/bignumber");
 const { getContractAddress } = require('@ethersproject/address');
 const { expect } = require('chai');
 const { ZERO_ADDRESS } = constants;
+const { expandTo18Decimals } = require('./utils');
 
 describe("TDrop Governance", function () {
 
@@ -245,7 +246,3 @@ describe("TDrop Governance", function () {
 
 
 });
-
-function expandTo18Decimals(n) {
-    return BigNumber.from(n).mul(BigNumber.from(10).pow(18))
-}

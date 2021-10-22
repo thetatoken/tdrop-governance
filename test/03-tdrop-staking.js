@@ -2,6 +2,7 @@ const { constants, expectEvent, expectRevert } = require('@openzeppelin/test-hel
 const { BigNumber } = require("@ethersproject/bignumber");
 const { expect } = require('chai');
 const { ZERO_ADDRESS } = constants;
+const { getBlockHeight, mineNBlocks, expandTo18Decimals } = require('./utils');
 
 describe("TDrop Staking", function () {
 
@@ -22,7 +23,7 @@ describe("TDrop Staking", function () {
     beforeEach(async function () {
         TDropToken = await ethers.getContractFactory("TDropToken");
         TDropParams = await ethers.getContractFactory("TDropParams");
-        TDropStaking = await ethers.getContractFactory("TDropStaking");
+        TDropStaking = await ethers.getContractFactory("TestTDropStaking");
 
         [deployer, superAdmin, admin, airdropper, ...addrs] = await ethers.getSigners();
 
@@ -201,6 +202,86 @@ describe("TDrop Staking", function () {
             expect(await tdropStaking.balanceOf(bob.address)).to.equal(0);
             expect(await tdropStaking.totalShares()).to.equal(0);
         });
+
+        it("distriute minted tdrop correctly", async function () {
+            let alice = addrs[2];
+            let bob = addrs[3];
+            let carol = addrs[4];
+            let amount = expandTo18Decimals(10000);
+
+            await expect(tdropToken.connect(airdropper).airdrop([alice.address, bob.address, carol.address], [amount, amount, amount]));
+
+            await tdropStaking.setLastRewardMintHeight(1); // Start minting rewards
+
+            // initially the recipient should have no shares
+            expect(await tdropStaking.balanceOf(alice.address)).to.be.equal(0);
+
+            // alice stake 100 
+            await tdropToken.connect(alice).approve(tdropStaking.address, expandTo18Decimals(100));
+            await tdropStaking.connect(alice).stake(expandTo18Decimals(100));
+            expect(await tdropToken.balanceOf(alice.address)).to.be.equal(amount.sub(expandTo18Decimals(100)));
+            expect(await tdropStaking.balanceOf(alice.address)).to.be.equal(expandTo18Decimals(100));
+
+            const rewardPerBlock = await tdropParams.stakingRewardPerBlock();
+
+            // staking pool reward should been minted
+            const height1 = await getBlockHeight();
+            const expectedReward1 = rewardPerBlock.mul(height1 - 1);
+            const rewardBalance1 = await tdropToken.balanceOf(tdropStaking.address);
+            expect(rewardBalance1).to.be.equal(expectedReward1.add(expandTo18Decimals(100)));
+
+            // Mine some blocks
+            await mineNBlocks(7);
+
+            // bob stake 100 
+            await tdropToken.connect(bob).approve(tdropStaking.address, expandTo18Decimals(100));
+            await tdropStaking.connect(bob).stake(expandTo18Decimals(100));
+            const height2 = await getBlockHeight();
+            let expectedReward2 = rewardPerBlock.mul(height2 - height1);
+            const rewardBalance2 = await tdropToken.balanceOf(tdropStaking.address);
+            expect(rewardBalance2).to.be.equal(expectedReward1.add(expandTo18Decimals(200)).add(expectedReward2));
+            const expectedBobShares = BigNumber.from(expandTo18Decimals(100)).mul(expandTo18Decimals(100)).div(rewardBalance2.sub(expandTo18Decimals(100)));
+            expect(await tdropStaking.balanceOf(bob.address)).to.be.equal(expectedBobShares);
+
+            // Mine some blocks
+            await mineNBlocks(7);
+
+            // carol stake 100 
+            await tdropToken.connect(carol).approve(tdropStaking.address, expandTo18Decimals(100));
+            await tdropStaking.connect(carol).stake(expandTo18Decimals(100));
+            const height3 = await getBlockHeight();
+            let expectedReward3 = rewardPerBlock.mul(height3 - height2);
+            const rewardBalance3 = await tdropToken.balanceOf(tdropStaking.address);
+            expect(rewardBalance3).to.be.equal(rewardBalance2.add(expandTo18Decimals(100)).add(expectedReward3));
+            const expectedCarolShares = expandTo18Decimals(100).mul(expandTo18Decimals(100).add(expectedBobShares)).div(rewardBalance3.sub(expandTo18Decimals(100)));
+            expect(await tdropStaking.balanceOf(carol.address)).to.be.equal(expectedCarolShares);
+
+            // Mine some blocks
+            await mineNBlocks(7);
+
+            // alice unstake  
+            await tdropStaking.connect(alice).unstake(expandTo18Decimals(100));
+
+            const height4 = await getBlockHeight();
+            const expectedRewardBalance = rewardPerBlock.mul(height4 - 1).add(expandTo18Decimals(300));
+            const expectedAliceTotalReward = expectedRewardBalance.mul(expandTo18Decimals(100)).div(expectedCarolShares.add(expectedBobShares).add(expandTo18Decimals(100)));
+
+            expect(await tdropToken.balanceOf(alice.address)).to.be.equal(expectedAliceTotalReward.add(amount).sub(expandTo18Decimals(100)));
+            expect(await tdropStaking.balanceOf(alice.address)).to.be.equal(0);
+
+            // Mine some blocks
+            await mineNBlocks(7);
+
+            // bob unstake  
+            const rewardBalance5 = await tdropToken.balanceOf(tdropStaking.address);
+
+            await tdropStaking.connect(bob).unstake(expectedBobShares);
+
+            const expectedBobTotalReward = rewardBalance5.add(rewardPerBlock.mul(7+1)).mul(expectedBobShares).div(expectedCarolShares.add(expectedBobShares));
+
+            expect(await tdropToken.balanceOf(bob.address)).to.be.equal(expectedBobTotalReward.add(amount).sub(expandTo18Decimals(100)));
+            expect(await tdropStaking.balanceOf(bob.address)).to.be.equal(0);
+        });
     });
 
     describe("Votes", function () {
@@ -335,3 +416,4 @@ describe("TDrop Staking", function () {
     });
 
 });
+
