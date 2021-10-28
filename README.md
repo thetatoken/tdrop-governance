@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This repository contains the smart contracts for the [TNT-20 TDROP Token](https://github.com/thetatoken/tdrop-governance/blob/master/contracts/TDropToken.sol), the [staking contract](https://github.com/thetatoken/tdrop-governance/blob/master/contracts/TDropStaking.sol) and the [on-chain governance](https://github.com/thetatoken/tdrop-governance/blob/master/contracts/GovernorAlpha.sol) module. For more information, please read Section 3 and 4 of the [Theta 2022 Ecosystem whitepaper](https://s3.us-east-2.amazonaws.com/assets.thetatoken.org/Theta-Ecosystem-2022-and-TDROP-Whitepaper.pdf?v=1635386388.501)
+This repository contains the smart contracts for the [TNT-20 TDROP Token](https://github.com/thetatoken/tdrop-governance/blob/master/contracts/TDropToken.sol), the [staking contract](https://github.com/thetatoken/tdrop-governance/blob/master/contracts/TDropStaking.sol) and the [on-chain governance](https://github.com/thetatoken/tdrop-governance/blob/master/contracts/GovernorAlpha.sol) module. For more information, please read Section 3 and 4 of the [Theta 2022 Ecosystem whitepaper](https://s3.us-east-2.amazonaws.com/assets.thetatoken.org/Theta-Ecosystem-2022-and-TDROP-Whitepaper.pdf?v=1635386388.501).
 
 ### TDROP Token
 
