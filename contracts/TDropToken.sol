@@ -1,4 +1,4 @@
-pragma solidity ^0.5.16;
+pragma solidity 0.5.16;
 pragma experimental ABIEncoderV2;
 
 import "./SafeMath.sol";
@@ -15,16 +15,16 @@ contract TDropToken {
 
     /// @notice Max number of tokens
     // Note that 2**96 > 20 * 10**9 * 10**18, therefore it is safe to use uint96 to represent the TDrop token (2**96/10**18 is roughly 79 billion).
-    uint public maxSupply = 20_000_000_000e18; // 20 billion TDrop. 
+    uint public constant maxSupply = 20_000_000_000e18; // 20 billion TDrop. 
 
     /// @notice Max token minted through airdrop
-    uint public maxAirdrop = 10_000_000_000e18; // 10 billion TDrop. 
+    uint public constant maxAirdrop = 10_000_000_000e18; // 10 billion TDrop. 
 
     /// @notice Max token minted for staking reward
-    uint public maxStakeReward = 4_000_000_000e18; // 4 billion TDrop. 
+    uint public constant maxStakeReward = 4_000_000_000e18; // 4 billion TDrop. 
 
     /// @notice Max token minted through liquidity mining
-    uint public maxLiquidityMiningReward = 6_000_000_000e18; // 6 billion TDrop. 
+    uint public constant maxLiquidityMiningReward = 6_000_000_000e18; // 6 billion TDrop. 
 
     /// @notice Total number of tokens in circulation
     uint public totalSupply = 0; 
@@ -86,6 +86,21 @@ contract TDropToken {
     /// @notice An event thats emitted when the liquidityMiner address is changed
     event LiquidityMinerChanged(address liquidityMiner, address newLiquidityMiner);
 
+    /// @notice An event thats emitted when the token contract is paused
+    event TokenPaused();
+
+    /// @notice An event thats emitted when the token contract is unpaused
+    event TokenUnpaused();
+
+    /// @notice An event thats emitted when new tokens are mined through NFT liquidity mining
+    event TokenMined(address recipient, uint amount);
+
+    /// @notice An event thats emitted when tokens are airdropped
+    event TokenAirdropped(address airdropper);
+
+    /// @notice An event thats emitted when tokens issued for staking reward
+    event StakingRewwardIssued(address recipient, uint amount);
+
     /// @notice The standard EIP-20 transfer event
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
@@ -98,6 +113,9 @@ contract TDropToken {
      * @param admin_ The account with admin permission
      */
     constructor(address superAdmin_, address admin_) public {
+        require(superAdmin_ != address(0), "superAdmin_ is address0"); 
+        require(admin_ != address(0), "admin_ is address0");
+
         superAdmin = superAdmin_;
         emit SuperAdminChanged(address(0), superAdmin);
         admin = admin_;
@@ -161,6 +179,7 @@ contract TDropToken {
      */
     function pause() onlyAdmin external {
         paused = true;
+        emit TokenPaused();
     }
 
     /**
@@ -168,6 +187,7 @@ contract TDropToken {
      */
     function unpause() onlyAdmin external {
         paused = false;
+        emit TokenUnpaused();
     }
 
     /**
@@ -199,6 +219,8 @@ contract TDropToken {
         uint96 amount = safe96(rawAmount, "TDrop::mine: amount exceeds 96 bits");
         liquidityMiningAccumulated = safe96(SafeMath.add(liquidityMiningAccumulated, amount), "TDrop::mine: liquidityMiningAccumulated exceeds 96 bits");
         require(liquidityMiningAccumulated <= maxLiquidityMiningReward, "TDrop::mine: accumlated airdrop token exceeds the max");
+
+        emit TokenMined(dst, amount);
     }
 
     /**
@@ -222,6 +244,8 @@ contract TDropToken {
             airdropAccumulated = safe96(SafeMath.add(airdropAccumulated, amount), "TDrop::airdrop: airdropAccumulated exceeds 96 bits");
             require(airdropAccumulated <= maxAirdrop, "TDrop::airdrop: accumlated airdrop token exceeds the max");
         }
+
+        emit TokenAirdropped(airdropper);
     }
 
     /**
@@ -235,6 +259,8 @@ contract TDropToken {
         uint96 amount = safe96(rawAmount, "TDrop::stakeReward: amount exceeds 96 bits");
         stakeRewardAccumulated = safe96(SafeMath.add(stakeRewardAccumulated, amount), "TDrop::stakeReward: stakeRewardAccumulated exceeds 96 bits");
         require(stakeRewardAccumulated <= maxStakeReward, "TDrop::stakeReward: accumlated stakeReward token exceeds the max");
+
+        emit StakingRewwardIssued(dst, amount);
     }
 
     /**
@@ -290,7 +316,7 @@ contract TDropToken {
         bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, rawAmount, nonces[owner]++, deadline));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        address signatory = ecrecover(digest, v, r, s);
+        address signatory = _recover(digest, v, r, s);
         require(signatory != address(0), "TDrop::permit: invalid signature");
         require(signatory == owner, "TDrop::permit: unauthorized");
         require(now <= deadline, "TDrop::permit: signature expired");
@@ -298,6 +324,26 @@ contract TDropToken {
         allowances[owner][spender] = amount;
 
         emit Approval(owner, spender, amount);
+    }
+
+    function _recover(bytes32 hash, uint8 v, bytes32 r, bytes32 s) internal pure returns (address) {
+        // EIP-2 still allows signature malleability for ecrecover(). Remove this possibility and make the signature
+        // unique. Appendix F in the Ethereum Yellow paper (https://ethereum.github.io/yellowpaper/paper.pdf), defines
+        // the valid range for s in (281): 0 < s < secp256k1n ÷ 2 + 1, and for v in (282): v ∈ {27, 28}. Most
+        // signatures from current libraries generate a unique signature with an s-value in the lower half order.
+        //
+        // If your library generates malleable signatures, such as s-values in the upper range, calculate a new s-value
+        // with 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141 - s1 and flip v from 27 to 28 or
+        // vice versa. If your library also generates signatures with 0/1 for v instead 27/28, add 27 to v to accept
+        // these malleable signatures as well.
+        require(uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "ECDSA: invalid signature 's' value");
+        require(v == 27 || v == 28, "ECDSA: invalid signature 'v' value");
+
+        // If the signature is valid (and not malleable), return the signer address
+        address signer = ecrecover(hash, v, r, s);
+        require(signer != address(0), "ECDSA: invalid signature");
+
+        return signer;
     }
 
     /**
@@ -351,11 +397,6 @@ contract TDropToken {
         balances[src] = sub96(balances[src], amount, "TDrop::_transferTokens: transfer amount exceeds balance");
         balances[dst] = add96(balances[dst], amount, "TDrop::_transferTokens: transfer amount overflows");
         emit Transfer(src, dst, amount);
-    }
-
-    function safe32(uint n, string memory errorMessage) internal pure returns (uint32) {
-        require(n < 2**32, errorMessage);
-        return uint32(n);
     }
 
     function safe96(uint n, string memory errorMessage) internal pure returns (uint96) {
