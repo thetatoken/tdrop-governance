@@ -67,6 +67,12 @@ contract TDropStaking {
     /// @notice An event thats emitted when a delegate account's vote balance changes
     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
 
+    /// @notice An event thats emitted when the token contract is paused
+    event Paused();
+
+    /// @notice An event thats emitted when the token contract is unpaused
+    event Unpaused();
+
     /**
      * @notice Construct a new TDrop token
      * @param superAdmin_ The account with super admin permission
@@ -75,6 +81,11 @@ contract TDropStaking {
      * @param tdropParams_ The system parameters contract address
      */
     constructor(address superAdmin_, address admin_, address tdrop_, address tdropParams_) public {
+        require( superAdmin_ != address(0), "superAdmin_ is address 0");
+        require( admin_ != address(0), "admin_ is address 0");
+        require( tdrop_ != address(0), "tdrop_ is address 0");
+        require( tdropParams_ != address(0), "tdropParams_ is address 0");
+
         superAdmin = superAdmin_;
         emit SuperAdminChanged(address(0), superAdmin);
         admin = admin_;
@@ -115,6 +126,7 @@ contract TDropStaking {
      */
     function pause() onlyAdmin external {
         paused = true;
+        emit Paused();
     }
 
     /**
@@ -122,6 +134,7 @@ contract TDropStaking {
      */
     function unpause() onlyAdmin external {
         paused = false;
+        emit Unpaused();
     }
 
     /**
@@ -150,6 +163,7 @@ contract TDropStaking {
      * @param rawAmount The number of tokens to be staked
      */
     function stake(uint rawAmount) onlyWhenUnpaused external returns (uint) {
+        require(rawAmount > 0, "TDropStaking::stake: invalid amount");
         uint96 amount = safe96(rawAmount, "TDropStaking::stake: amount exceeds 96 bits");
 
         // Make sure reward is up-to-date so that share price is accurate.
@@ -214,7 +228,7 @@ contract TDropStaking {
      * @notice Delegate votes from `msg.sender` to `delegatee`
      * @param delegatee The address to delegate votes to
      */
-    function delegate(address delegatee) public {
+    function delegate(address delegatee) external {
         return _delegate(msg.sender, delegatee);
     }
 
@@ -227,7 +241,7 @@ contract TDropStaking {
      * @param r Half of the ECDSA signature pair
      * @param s Half of the ECDSA signature pair
      */
-    function delegateBySig(address delegatee, uint nonce, uint expiry, uint8 v, bytes32 r, bytes32 s) public {
+    function delegateBySig(address delegatee, uint nonce, uint expiry, uint8 v, bytes32 r, bytes32 s) external {
         bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
@@ -255,7 +269,7 @@ contract TDropStaking {
      * @param blockNumber The block number to get the vote balance at
      * @return The number of votes the account had as of the given block
      */
-    function getPriorVotes(address account, uint blockNumber) public view returns (uint96) {
+    function getPriorVotes(address account, uint blockNumber) external view returns (uint96) {
         require(blockNumber < block.number, "TDropStaking::getPriorVotes: not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[account];

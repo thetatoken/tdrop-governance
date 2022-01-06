@@ -28,6 +28,9 @@ contract TDropParams {
      * @param admin_ The account with admin permission
      */
     constructor(address superAdmin_, address admin_) public {
+        require(superAdmin_ != address(0), "superAdmin_ is address 0");
+        require(admin_ != address(0), "admin_ is address0");
+        
         superAdmin = superAdmin_;
         emit SuperAdminChanged(address(0), superAdmin);
         admin = admin_;
@@ -67,33 +70,6 @@ contract TDropParams {
     function setStakingRewardPerBlock(uint stakingRewardPerBlock_) onlyAdmin external {
         emit StakingRewardPerBlockChanged(stakingRewardPerBlock, stakingRewardPerBlock_);
         stakingRewardPerBlock = stakingRewardPerBlock_;
-    }
-
-    function safe32(uint n, string memory errorMessage) internal pure returns (uint32) {
-        require(n < 2**32, errorMessage);
-        return uint32(n);
-    }
-
-    function safe96(uint n, string memory errorMessage) internal pure returns (uint96) {
-        require(n < 2**96, errorMessage);
-        return uint96(n);
-    }
-
-    function add96(uint96 a, uint96 b, string memory errorMessage) internal pure returns (uint96) {
-        uint96 c = a + b;
-        require(c >= a, errorMessage);
-        return c;
-    }
-
-    function sub96(uint96 a, uint96 b, string memory errorMessage) internal pure returns (uint96) {
-        require(b <= a, errorMessage);
-        return a - b;
-    }
-
-    function getChainId() internal pure returns (uint) {
-        uint256 chainId;
-        assembly { chainId := chainid() }
-        return chainId;
     }
 
     modifier onlySuperAdmin { 
