@@ -1,4 +1,4 @@
-pragma solidity ^0.5.16;
+pragma solidity 0.5.16;
 pragma experimental ABIEncoderV2;
 
 import "./SafeMath.sol";
@@ -30,7 +30,7 @@ contract TDropParams {
     constructor(address superAdmin_, address admin_) public {
         require(superAdmin_ != address(0), "superAdmin_ is address 0");
         require(admin_ != address(0), "admin_ is address0");
-        
+
         superAdmin = superAdmin_;
         emit SuperAdminChanged(address(0), superAdmin);
         admin = admin_;
