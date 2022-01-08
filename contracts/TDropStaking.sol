@@ -23,7 +23,7 @@ contract TDropStaking {
     bool public paused;
 
     /// @notice last block height that staking reward has been issued
-    uint public lastRewardMintHeight = 10000000; // TODO: set proper initial value
+    uint public lastRewardMintHeight = 13949050; // the expected block height at 12pm Feb 1, 2022 PT. TODO: set proper initial value
 
     /// @notice Total number of shares
     uint public totalShares = 0; 
