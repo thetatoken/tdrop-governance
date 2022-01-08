@@ -99,7 +99,7 @@ contract TDropToken {
     event TokenAirdropped(address airdropper);
 
     /// @notice An event thats emitted when tokens issued for staking reward
-    event StakingRewwardIssued(address recipient, uint amount);
+    event StakingRewardIssued(address recipient, uint amount);
 
     /// @notice The standard EIP-20 transfer event
     event Transfer(address indexed from, address indexed to, uint256 amount);
@@ -201,11 +201,13 @@ contract TDropToken {
         // mint the amount
         uint96 amount = safe96(rawAmount, "TDrop::mint: amount exceeds 96 bits");
         totalSupply = safe96(SafeMath.add(totalSupply, amount), "TDrop::mint: totalSupply exceeds 96 bits");
-        require(totalSupply <= maxSupply, "TDrop::mint: totalSupply exceeds maxSupply");
-
-        // transfer the amount to the recipient
-        balances[dst] = add96(balances[dst], amount, "TDrop::mint: transfer amount overflows");
-        emit Transfer(address(0), dst, amount);
+        
+        //require(totalSupply <= maxSupply, "TDrop::mint: totalSupply exceeds maxSupply");
+        if (totalSupply <= maxSupply) { // graceful handling of over-minting
+            // transfer the amount to the recipient
+            balances[dst] = add96(balances[dst], amount, "TDrop::mint: transfer amount overflows");
+            emit Transfer(address(0), dst, amount);
+        }
     }
 
     /**
@@ -214,13 +216,14 @@ contract TDropToken {
      * @param rawAmount The number of tokens to be minted
      */
     function mine(address dst, uint rawAmount) onlyLiquidityMiner external {
-        _mint(dst, rawAmount);
-
         uint96 amount = safe96(rawAmount, "TDrop::mine: amount exceeds 96 bits");
         liquidityMiningAccumulated = safe96(SafeMath.add(liquidityMiningAccumulated, amount), "TDrop::mine: liquidityMiningAccumulated exceeds 96 bits");
-        require(liquidityMiningAccumulated <= maxLiquidityMiningReward, "TDrop::mine: accumlated airdrop token exceeds the max");
-
-        emit TokenMined(dst, amount);
+        
+        // require(liquidityMiningAccumulated <= maxLiquidityMiningReward, "TDrop::mine: accumlated airdrop token exceeds the max");
+        if (liquidityMiningAccumulated <= maxLiquidityMiningReward) { // graceful handling of over-minting
+            _mint(dst, rawAmount);
+            emit TokenMined(dst, amount);
+        }
     }
 
     /**
@@ -254,13 +257,14 @@ contract TDropToken {
      * @param rawAmount The number of tokens to be minted
      */
     function stakeReward(address dst, uint rawAmount) onlyStakingPool external {
-        _mint(dst, rawAmount);
-
         uint96 amount = safe96(rawAmount, "TDrop::stakeReward: amount exceeds 96 bits");
         stakeRewardAccumulated = safe96(SafeMath.add(stakeRewardAccumulated, amount), "TDrop::stakeReward: stakeRewardAccumulated exceeds 96 bits");
-        require(stakeRewardAccumulated <= maxStakeReward, "TDrop::stakeReward: accumlated stakeReward token exceeds the max");
-
-        emit StakingRewwardIssued(dst, amount);
+        
+        //require(stakeRewardAccumulated <= maxStakeReward, "TDrop::stakeReward: accumlated stakeReward token exceeds the max");
+        if (stakeRewardAccumulated <= maxStakeReward) { // graceful handling of over-minting
+            _mint(dst, rawAmount);
+            emit StakingRewardIssued(dst, amount);
+        }
     }
 
     /**

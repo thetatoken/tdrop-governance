@@ -242,10 +242,14 @@ describe("TDrop Token Special Features", function () {
       await tdropToken.connect(liquidityMiner).mine(recipient2.address, amount3);
       expect(await tdropToken.balanceOf(recipient2.address)).to.be.equal(amount2.add(amount3));
 
-      // exceed the airdrop limit, should revert
-      await expect(tdropToken.connect(liquidityMiner).mine(recipient1.address, 1)).to.be.reverted;
-      await expect(tdropToken.connect(liquidityMiner).mine(recipient2.address, 8)).to.be.reverted;
+      // await expect(tdropToken.connect(liquidityMiner).mine(recipient1.address, 1)).to.be.reverted;
+      // await expect(tdropToken.connect(liquidityMiner).mine(recipient2.address, 8)).to.be.reverted;
+      
+      // Should not exceed the max limit
       expect(await tdropToken.totalSupply()).to.be.equal(MAX_MINING_AMOUNT);
+      await tdropToken.connect(liquidityMiner).mine(recipient1.address, 1); // New behavior: should NOT revert
+      await tdropToken.connect(liquidityMiner).mine(recipient2.address, 8); // New behavior: should NOT revert
+      expect(await tdropToken.totalSupply()).to.be.equal(MAX_MINING_AMOUNT); // total supply should not change
 
       //console.log("tdropToken.totalSupply():", (await tdropToken.totalSupply()).toString());
     });
