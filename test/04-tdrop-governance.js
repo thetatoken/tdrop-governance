@@ -31,7 +31,7 @@ describe("TDrop Governance", function () {
         TDropToken = await ethers.getContractFactory("TDropToken");
         TDropParams = await ethers.getContractFactory("TDropParams");
         TDropStaking = await ethers.getContractFactory("TDropStaking");
-        Governor = await ethers.getContractFactory("TestGovernorAlpha");
+        Governor = await ethers.getContractFactory("GovernorAlpha");
         Timelock = await ethers.getContractFactory("TestTimelock");
 
 
@@ -58,7 +58,7 @@ describe("TDrop Governance", function () {
             nonce: transactionCount + 1
         });
 
-        governor = await Governor.deploy(timelockAddr, tdropStaking.address);
+        governor = await Governor.deploy(superAdmin.address, admin.address, timelockAddr, tdropStaking.address);
         await governor.deployed();
 
         // timelock = await Timelock.deploy(gonvernorAddr, 2 * 86400);
@@ -72,7 +72,7 @@ describe("TDrop Governance", function () {
 
         await tdropParams.connect(superAdmin).setAdmin(timelock.address);
 
-        await governor.setVotingPeriod(3);
+        await governor.connect(admin).setVotingPeriod(3);
     });
 
 

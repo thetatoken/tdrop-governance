@@ -4,9 +4,9 @@ pragma experimental ABIEncoderV2;
 import "./GovernorAlpha.sol";
 
 contract TestGovernorAlpha is GovernorAlpha {
-    constructor(address timelock_, address tdropStaking_)
+    constructor(address superAdmin_, address admin_, address timelock_, address tdropStaking_)
         public
-        GovernorAlpha(timelock_, tdropStaking_)
+        GovernorAlpha(superAdmin_, admin_, timelock_, tdropStaking_)
     {}
 
     function setVotingDelay(uint256 votingDelay_) public {

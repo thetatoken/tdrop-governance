@@ -6,15 +6,13 @@ contract GovernorAlpha {
     string public constant name = "TDrop Governor Alpha";
 
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    function quorumVotes() public pure returns (uint256) {
-        // TODO: set a proper number
-        return 40_000_000e18;
+    function quorumVotes() public view returns (uint256) {
+        return quorumThresholdInWei;
     }
 
     /// @notice The number of votes required in order for a voter to become a proposer
-    function proposalThreshold() public pure returns (uint256) {
-        // TODO: set a proper number
-        return 10_000_000e18;
+    function proposalThreshold() public view returns (uint256) {
+        return proposalThresholdInWei;
     }
 
     /// @notice The maximum number of actions that can be included in a proposal
@@ -22,11 +20,23 @@ contract GovernorAlpha {
         return 10;
     } // 10 actions
 
+    /// @notice The super admin address
+    address public superAdmin;
+
+    /// @notice The admin address
+    address public admin;
+
+    /// @notice The The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
+    uint256 quorumThresholdInWei = 40_000_000e18;
+
+    /// @notice The number of votes required in order for a voter to become a proposer
+    uint256 proposalThresholdInWei = 10_000_000e18;
+
     /// @notice The delay before voting on a proposal may take place, once proposed
     uint256 public votingDelay = 1;    // 1 block
 
     /// @notice The duration of voting on a proposal, in blocks
-    uint256 public votingPeriod = 100_800; // ~7 days in blocks (assuming 15s blocks)
+    uint256 public votingPeriod = 100_800; // ~7 days in blocks (assuming 6s blocks)
 
     /// @notice The address of the TDrop Protocol Timelock
     TimelockInterface public timelock;
@@ -136,9 +146,66 @@ contract GovernorAlpha {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint256 id);
 
-    constructor(address timelock_, address tdropStaking_) public {
+    /// @notice An event thats emitted when the super admin address is changed
+    event SuperAdminChanged(address superAdmin, address newSuperAdmin);
+
+    /// @notice An event thats emitted when the admin address is changed
+    event AdminChanged(address admin, address newAdmin);
+
+    event QuorumThresholdChanged(uint256 quorumThresholdInWei, uint256 newQuorumThresholdInWei);
+
+    event ProposalThresholdChanged(uint256 proposalThresholdInWei, uint256 newProposalThresholdInWei);
+
+    event VotingDelayChanged(uint256 votingDelay, uint256 newVotingDelay);
+
+    event VotingPeriodChanged(uint256 votingPeriod, uint256 newVotingPeriod);
+    
+    constructor(address superAdmin_, address admin_, address timelock_, address tdropStaking_) public {
+        superAdmin = superAdmin_;
+        emit SuperAdminChanged(address(0), superAdmin);
+        admin = admin_;
+        emit AdminChanged(address(0), admin);
+
         timelock = TimelockInterface(timelock_);
         tdropStaking = TDropStakingInterface(tdropStaking_);
+    }
+    
+    /**
+     * @notice Change the admin address
+     * @param superAdmin_ The address of the new super admin
+     */
+    function setSuperAdmin(address superAdmin_) onlySuperAdmin external {
+        emit SuperAdminChanged(superAdmin, superAdmin_);
+        superAdmin = superAdmin_;
+    }
+
+    /**
+     * @notice Change the admin address
+     * @param admin_ The address of the new admin
+     */
+    function setAdmin(address admin_) onlySuperAdmin external {
+        emit AdminChanged(admin, admin_);
+        admin = admin_;
+    }
+
+    function setQuorumThreshold(uint256 quorumThresholdInWei_) onlyAdmin external {
+        emit QuorumThresholdChanged(quorumThresholdInWei, quorumThresholdInWei_);
+        quorumThresholdInWei = quorumThresholdInWei_;
+    }
+
+    function setProposalThreshold(uint256 proposalThreshold_) onlyAdmin external {
+        emit ProposalThresholdChanged(proposalThresholdInWei, proposalThreshold_);
+        proposalThresholdInWei = proposalThreshold_;
+    }
+
+    function setVotingDelay(uint256 votingDelay_) onlyAdmin external {
+        emit VotingDelayChanged(votingDelay, votingDelay_);
+        votingDelay = votingDelay_;
+    }
+
+    function setVotingPeriod(uint256 votingPeriod_) onlyAdmin external {
+        emit VotingPeriodChanged(votingPeriod, votingPeriod_);
+        votingPeriod = votingPeriod_;
     }
 
     function propose(
@@ -437,6 +504,16 @@ contract GovernorAlpha {
             chainId := chainid()
         }
         return chainId;
+    }
+
+    modifier onlySuperAdmin { 
+        require(msg.sender == superAdmin, "TDropStaking::onlySuperAdmin: only the super admin can perform this action");
+        _; 
+    }
+
+    modifier onlyAdmin { 
+        require(msg.sender == admin, "TDropStaking::onlyAdmin: only the admin can perform this action");
+        _; 
     }
 }
 
