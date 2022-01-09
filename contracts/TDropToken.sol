@@ -193,7 +193,7 @@ contract TDropToken {
      *         Note that the admin will ultimiately be set to the governance contract address
      */
     function updateMaxStakeReward(uint newMaxStakeReward) onlyAdmin external {
-        require(newMaxStakeReward <= 8_000_000_000e18, "newMaxStakeReward exceeds the 8B hardcap");
+        require(newMaxStakeReward <= 8_000_000_000e18, "newMaxStakeReward exceeds the 8 Billion hardcap");
         maxStakeReward = newMaxStakeReward;
     }
 
@@ -202,7 +202,7 @@ contract TDropToken {
      *         Note that the admin will ultimiately be set to the governance contract address
      */
     function updateMaxLiquidityMiningReward(uint newMaxLiquidityMiningReward) onlyAdmin external {
-        require(newMaxLiquidityMiningReward <= 10_000_000_000e18, "newMaxLiquidityMiningReward exceeds the 10B hardcap");
+        require(newMaxLiquidityMiningReward <= 12_000_000_000e18, "newMaxLiquidityMiningReward exceeds the 12 Billion hardcap");
         maxLiquidityMiningReward = newMaxLiquidityMiningReward;
     }
 
