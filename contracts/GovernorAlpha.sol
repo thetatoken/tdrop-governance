@@ -27,10 +27,10 @@ contract GovernorAlpha {
     address public admin;
 
     /// @notice The The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    uint256 quorumThresholdInWei = 40_000_000e18;
+    uint256 quorumThresholdInWei = 50_000_000e18;
 
     /// @notice The number of votes required in order for a voter to become a proposer
-    uint256 proposalThresholdInWei = 10_000_000e18;
+    uint256 proposalThresholdInWei = 5_000_000e18;
 
     /// @notice The delay before voting on a proposal may take place, once proposed
     uint256 public votingDelay = 1;    // 1 block

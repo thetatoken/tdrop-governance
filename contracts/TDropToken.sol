@@ -11,20 +11,16 @@ contract TDropToken {
     string public constant symbol = "TDROP";
 
     /// @notice EIP-20 token decimals for this token
-    uint8 public constant decimals = 18;
-
-    /// @notice Max number of tokens
-    // Note that 2**96 > 20 * 10**9 * 10**18, therefore it is safe to use uint96 to represent the TDrop token (2**96/10**18 is roughly 79 billion).
-    uint public constant maxSupply = 20_000_000_000e18; // 20 billion TDrop. 
+    uint8 public constant decimals = 18; 
 
     /// @notice Max token minted through airdrop
     uint public constant maxAirdrop = 10_000_000_000e18; // 10 billion TDrop. 
 
     /// @notice Max token minted for staking reward
-    uint public constant maxStakeReward = 4_000_000_000e18; // 4 billion TDrop. 
+    uint public maxStakeReward = 4_000_000_000e18; // 4 billion TDrop initially, community can vote on-chain to increase this limit after 4 years per TDrop whitepaper.
 
     /// @notice Max token minted through liquidity mining
-    uint public constant maxLiquidityMiningReward = 6_000_000_000e18; // 6 billion TDrop. 
+    uint public maxLiquidityMiningReward = 6_000_000_000e18; // 6 billion TDrop, community can vote on-chain to increase this limit after 4 years per TDrop whitepaper.
 
     /// @notice Total number of tokens in circulation
     uint public totalSupply = 0; 
@@ -38,10 +34,12 @@ contract TDropToken {
     /// @notice Accumulated token minted through liquidity mining
     uint public liquidityMiningAccumulated = 0;
 
-    /// @notice The super admin address
+    /// @notice The super admin address, ultimately this will be set to address(0x0)
     address public superAdmin;
 
-    /// @notice The admin address
+    /// @notice The admin address, ultimately this will be set to the governance contract address
+    ///         so the community can colletively decide some of the key parameters (e.g. maxStakeReward)
+    ///         through on-chain governance.
     address public admin;
 
     /// @notice Address which may airdrop new tokens
@@ -191,6 +189,24 @@ contract TDropToken {
     }
 
     /**
+     * @notice Function to allow community to collectively decide the the maximum stake reward through on-chain governance.
+     *         Note that the admin will ultimiately be set to the governance contract address
+     */
+    function updateMaxStakeReward(uint newMaxStakeReward) onlyAdmin external {
+        require(newMaxStakeReward <= 8_000_000_000e18, "newMaxStakeReward exceeds the 8B hardcap");
+        maxStakeReward = newMaxStakeReward;
+    }
+
+    /**
+     * @notice Function to allow community to collectively decide the the maximum NFT liquidity mining reward through on-chain governance.
+     *         Note that the admin will ultimiately be set to the governance contract address
+     */
+    function updateMaxLiquidityMiningReward(uint newMaxLiquidityMiningReward) onlyAdmin external {
+        require(newMaxLiquidityMiningReward <= 10_000_000_000e18, "newMaxLiquidityMiningReward exceeds the 10B hardcap");
+        maxLiquidityMiningReward = newMaxLiquidityMiningReward;
+    }
+
+    /**
      * @notice Mint new tokens
      * @param dst The address of the destination account
      * @param rawAmount The number of tokens to be minted
@@ -200,15 +216,11 @@ contract TDropToken {
 
         // mint the amount
         uint96 amount = safe96(rawAmount, "TDrop::mint: amount exceeds 96 bits");
-        uint96 expectedTotalSupply = safe96(SafeMath.add(totalSupply, amount), "TDrop::mint: totalSupply exceeds 96 bits");
+        totalSupply = safe96(SafeMath.add(totalSupply, amount), "TDrop::mint: totalSupply exceeds 96 bits");
 
-        //require(totalSupply <= maxSupply, "TDrop::mint: totalSupply exceeds maxSupply");
-        if (expectedTotalSupply <= maxSupply) { // graceful handling of over-minting
-            // transfer the amount to the recipient
-            totalSupply = expectedTotalSupply;
-            balances[dst] = add96(balances[dst], amount, "TDrop::mint: transfer amount overflows");
-            emit Transfer(address(0), dst, amount);
-        }
+        // transfer the amount to the recipient
+        balances[dst] = add96(balances[dst], amount, "TDrop::mint: transfer amount overflows");
+        emit Transfer(address(0), dst, amount);
     }
 
     /**

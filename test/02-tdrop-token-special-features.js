@@ -101,6 +101,51 @@ describe("TDrop Token Special Features", function () {
       expect(await tdropToken.paused()).to.equal(true);
     });
 
+    it("Only the admin can update the staking and liquidity mining reward limit", async function () {
+      let admin2 = addrs[0];
+      let dec18 = new BigNumber.from('1000000000000000000');
+
+      // non-admin cannot update the staking and liquidity mining reward limit
+      await expect(tdropToken.connect(admin2).updateMaxStakeReward(new BigNumber.from('7000000000').mul(dec18))).to.be.reverted;
+      expect(await tdropToken.maxStakeReward()).to.equal(new BigNumber.from('4000000000').mul(dec18));
+      await expect(tdropToken.connect(admin2).updateMaxLiquidityMiningReward(new BigNumber.from('7000000000').mul(dec18))).to.be.reverted;
+      expect(await tdropToken.maxLiquidityMiningReward()).to.equal(new BigNumber.from('6000000000').mul(dec18));
+      
+      // maxStakeReward = await tdropToken.maxStakeReward();
+      // maxLiquidityMiningReward = await tdropToken.maxLiquidityMiningReward();
+      // console.log("maxStakeReward:", maxStakeReward.toString(), "maxLiquidityMiningReward:", maxLiquidityMiningReward.toString());
+
+      // admin can update the staking and liquidity mining reward limit
+      await tdropToken.connect(admin).updateMaxStakeReward(new BigNumber.from('7000000000').mul(dec18));
+      expect(await tdropToken.maxStakeReward()).to.equal(new BigNumber.from('7000000000').mul(dec18));
+      await tdropToken.connect(admin).updateMaxLiquidityMiningReward(new BigNumber.from('9000000000').mul(dec18));
+      expect(await tdropToken.maxLiquidityMiningReward()).to.equal(new BigNumber.from('9000000000').mul(dec18));
+
+      // maxStakeReward = await tdropToken.maxStakeReward();
+      // maxLiquidityMiningReward = await tdropToken.maxLiquidityMiningReward();
+      // console.log("maxStakeReward:", maxStakeReward.toString(), "maxLiquidityMiningReward:", maxLiquidityMiningReward.toString());
+
+      // even amin cannot set the staking and liquidity mining reward limit too high
+      await expect(tdropToken.connect(admin2).updateMaxStakeReward(new BigNumber.from('8000000001').mul(dec18))).to.be.reverted;
+      expect(await tdropToken.maxStakeReward()).to.equal(new BigNumber.from('7000000000').mul(dec18));
+      await expect(tdropToken.connect(admin2).updateMaxLiquidityMiningReward(new BigNumber.from('10000000001').mul(dec18))).to.be.reverted;
+      expect(await tdropToken.maxLiquidityMiningReward()).to.equal(new BigNumber.from('9000000000').mul(dec18));
+
+      // maxStakeReward = await tdropToken.maxStakeReward();
+      // maxLiquidityMiningReward = await tdropToken.maxLiquidityMiningReward();
+      // console.log("maxStakeReward:", maxStakeReward.toString(), "maxLiquidityMiningReward:", maxLiquidityMiningReward.toString());
+
+      // set the staking and liquidity mining reward limit back to the default
+      await tdropToken.connect(admin).updateMaxStakeReward(new BigNumber.from('4000000000').mul(dec18));
+      expect(await tdropToken.maxStakeReward()).to.equal(new BigNumber.from('4000000000').mul(dec18));
+      await tdropToken.connect(admin).updateMaxLiquidityMiningReward(new BigNumber.from('6000000000').mul(dec18));
+      expect(await tdropToken.maxLiquidityMiningReward()).to.equal(new BigNumber.from('6000000000').mul(dec18));
+
+      // maxStakeReward = await tdropToken.maxStakeReward();
+      // maxLiquidityMiningReward = await tdropToken.maxLiquidityMiningReward();
+      // console.log("maxStakeReward:", maxStakeReward.toString(), "maxLiquidityMiningReward:", maxLiquidityMiningReward.toString());
+    });
+    
   });
 
   describe("Airdrop", function () {
@@ -119,6 +164,7 @@ describe("TDrop Token Special Features", function () {
 
       await tdropToken.connect(admin).setAirdropper(airdropper.address);
       expect(await tdropToken.airdropper()).to.equal(airdropper.address);
+      expect(await tdropToken.totalSupply()).to.be.equal(new BigNumber.from(0));
 
       // only the designated airdropper can do the airdrop
       await expect(tdropToken.connect(airdropper2).airdrop([recipient1.address, recipient2.address], [amount1, amount2])).to.be.reverted;
@@ -129,12 +175,14 @@ describe("TDrop Token Special Features", function () {
       await tdropToken.connect(airdropper).airdrop([recipient1.address, recipient2.address], [amount1, amount2]);
       expect(await tdropToken.balanceOf(recipient1.address)).to.be.equal(amount1);
       expect(await tdropToken.balanceOf(recipient2.address)).to.be.equal(amount2);      
+      expect(await tdropToken.totalSupply()).to.be.equal(new BigNumber.from(amount1).add(new BigNumber.from(amount2)));
 
       // airdrop again
       await tdropToken.connect(airdropper).airdrop([recipient1.address, recipient2.address], [amount1*8, amount2*2]);
       expect(await tdropToken.balanceOf(recipient1.address)).to.be.equal(amount1*9);
       expect(await tdropToken.balanceOf(recipient2.address)).to.be.equal(amount2*3);
-      
+      expect(await tdropToken.totalSupply()).to.be.equal(new BigNumber.from(amount1*9).add(new BigNumber.from(amount2*3)));
+
       // set airdropper to the ZERO_ADDRESS for better security
       await tdropToken.connect(admin).setAirdropper(ZERO_ADDRESS);
       expect(await tdropToken.airdropper()).to.equal("0x0000000000000000000000000000000000000000");
@@ -151,6 +199,7 @@ describe("TDrop Token Special Features", function () {
       // initially the recipient should have no TDrop
       expect(await tdropToken.balanceOf(recipient1.address)).to.be.equal(0);
       expect(await tdropToken.balanceOf(recipient2.address)).to.be.equal(0);
+      expect(await tdropToken.totalSupply()).to.be.equal(new BigNumber.from(0));
 
       await tdropToken.connect(admin).setAirdropper(airdropper.address);
       expect(await tdropToken.airdropper()).to.equal(airdropper.address);
@@ -159,10 +208,12 @@ describe("TDrop Token Special Features", function () {
       await tdropToken.connect(airdropper).airdrop([recipient1.address, recipient2.address], [amount1, amount2]);
       expect(await tdropToken.balanceOf(recipient1.address)).to.be.equal(amount1);
       expect(await tdropToken.balanceOf(recipient2.address)).to.be.equal(amount2);
+      expect(await tdropToken.totalSupply()).to.be.equal(new BigNumber.from(amount1).add(new BigNumber.from(amount2)));
 
       // airdrop amount3 to recipient1
       await tdropToken.connect(airdropper).airdrop([recipient1.address], [amount3]);
       expect(await tdropToken.balanceOf(recipient1.address)).to.be.equal(amount1.add(amount3));
+      expect(await tdropToken.totalSupply()).to.be.equal(new BigNumber.from(amount1).add(new BigNumber.from(amount2)).add(new BigNumber.from(amount3)));
 
       // exceed the airdrop limit, should revert
       await expect(tdropToken.connect(airdropper).airdrop([recipient2.address], [1])).to.be.reverted;
