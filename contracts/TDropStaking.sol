@@ -127,7 +127,7 @@ contract TDropStaking {
     /**
      * @notice TDrop balance of the pool(staked + reward)
      */
-    function poolBalance() private view returns (uint)  {
+    function poolTDropBalance() private view returns (uint)  {
         return tdrop.balanceOf(address(this));
     }
 
@@ -155,7 +155,7 @@ contract TDropStaking {
         // Make sure reward is up-to-date so that share price is accurate.
         updateReward();
 
-        uint prevBalance = poolBalance();
+        uint prevBalance = poolTDropBalance();
 
 		tdrop.transferFrom(msg.sender, address(this), amount);
 
@@ -188,7 +188,7 @@ contract TDropStaking {
 
         uint96 sharesAmount = safe96(rawShares, "TDropStaking::stake: amount exceeds 96 bits");
 
-        uint amount  = safe96(SafeMath.div(SafeMath.mul(poolBalance(), sharesAmount), totalShares), "TDropStaking::unstake: invalid output amount");
+        uint amount  = safe96(SafeMath.div(SafeMath.mul(poolTDropBalance(), sharesAmount), totalShares), "TDropStaking::unstake: invalid output amount");
 
         shares[msg.sender] = safe96(SafeMath.sub(shares[msg.sender], sharesAmount), "TDropStaking::unstake: invalid output shares");
         totalShares = safe96(SafeMath.sub(totalShares, sharesAmount), "TDropStaking::unstake: invalid total shares");
@@ -199,6 +199,22 @@ contract TDropStaking {
         tdrop.transfer(msg.sender, amount);
 
         return amount;
+    }
+
+    /**
+     * @notice estimate the amount of TDrop owned by the `account`
+     * @param account The address of the account to get the balance of
+     * @return The amount of TDrop of the account owns (staked + rewards)
+     */
+    function estimatedTDropOwnedBy(address account) external view returns (uint) {
+        uint96 accountShares = shares[account];
+        uint currentHeight = block.number;
+
+        uint96 totalRewardSinceLastMint = safe96(SafeMath.mul(tdropParams.stakingRewardPerBlock(), SafeMath.sub(currentHeight, lastRewardMintHeight)), "TDropStaking::estimatedTDropOwnedBy: reward amount exceeds 96 bits");
+        uint96 estimatedPoolTDrop = safe96(SafeMath.add(poolTDropBalance(), totalRewardSinceLastMint), "TDropStaking::estimatedTDropOwnedBy: reward amount exceeds 96 bits");
+        uint96 estimatedAccountTDrop = safe96(SafeMath.div(SafeMath.mul(estimatedPoolTDrop, accountShares), totalShares), "TDropStaking::estimatedTDropOwnedBy: invalid account TDrop amount");
+
+        return estimatedAccountTDrop;
     }
 
     /**
