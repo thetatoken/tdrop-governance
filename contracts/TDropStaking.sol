@@ -221,10 +221,17 @@ contract TDropStaking {
      * @return The amount of TDrop of the account owns (staked + rewards)
      */
     function estimatedTDropOwnedBy(address account) external view returns (uint) {
+        if (totalShares == 0) {
+            return 0;
+        }
         uint96 accountShares = shares[account];
         uint currentHeight = block.number;
 
-        uint96 totalRewardSinceLastMint = safe96(SafeMath.mul(tdropParams.stakingRewardPerBlock(), SafeMath.sub(currentHeight, lastRewardMintHeight)), "TDropStaking::estimatedTDropOwnedBy: reward amount exceeds 96 bits");
+        uint96 totalRewardSinceLastMint = 0;
+        if (currentHeight >= lastRewardMintHeight) {
+            totalRewardSinceLastMint = safe96(SafeMath.mul(tdropParams.stakingRewardPerBlock(), SafeMath.sub(currentHeight, lastRewardMintHeight)), "TDropStaking::estimatedTDropOwnedBy: reward amount exceeds 96 bits");
+        }
+
         uint96 estimatedPoolTDrop = safe96(SafeMath.add(poolTDropBalance(), totalRewardSinceLastMint), "TDropStaking::estimatedTDropOwnedBy: reward amount exceeds 96 bits");
         uint96 estimatedAccountTDrop = safe96(SafeMath.div(SafeMath.mul(estimatedPoolTDrop, accountShares), totalShares), "TDropStaking::estimatedTDropOwnedBy: invalid account TDrop amount");
 
