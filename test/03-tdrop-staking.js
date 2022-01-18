@@ -378,7 +378,7 @@ describe("TDrop Staking", function () {
         });
     });
 
-    describe("Pause Token", function () {
+    describe("Pause Staking", function () {
         this.timeout(50000);
 
         it("Cannot stake when paused", async function () {
@@ -391,7 +391,7 @@ describe("TDrop Staking", function () {
 
             // stake
             await tdropToken.connect(recipient1).approve(tdropStaking.address, 100);
-            await expect(tdropStaking.connect(recipient1).stake(100)).to.be.revertedWith('TDropStaking::onlyWhenUnpaused: token is paused');
+            await expect(tdropStaking.connect(recipient1).stake(100)).to.be.revertedWith('TDropStaking::onlyWhenUnpaused: staking is paused');
 
             await tdropStaking.connect(admin).unpause();
 
@@ -403,7 +403,7 @@ describe("TDrop Staking", function () {
             // unstake
             await tdropStaking.connect(admin).pause();
 
-            await expect(tdropStaking.connect(recipient1).unstake(100)).to.be.revertedWith('TDropStaking::onlyWhenUnpaused: token is paused');
+            await expect(tdropStaking.connect(recipient1).unstake(100)).to.be.revertedWith('TDropStaking::onlyWhenUnpaused: staking is paused');
 
             await tdropStaking.connect(admin).unpause();
 
