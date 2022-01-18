@@ -405,7 +405,7 @@ contract TDropStaking {
     }
 
     modifier onlyWhenUnpaused {
-        require(!paused, "TDropStaking::onlyWhenUnpaused: token is paused");
+        require(!paused, "TDropStaking::onlyWhenUnpaused: staking is paused");
         _;
     }
 }
