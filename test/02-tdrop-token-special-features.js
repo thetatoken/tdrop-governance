@@ -151,6 +151,32 @@ describe("TDrop Token Special Features", function () {
   describe("Airdrop", function () {
     this.timeout(50000);
 
+    it("view account balances after airdrop", async function () {
+      let recipient1 = addrs[3];
+      let recipient2 = addrs[4];
+
+      let dec18 = new BigNumber.from('1000000000000000000');
+      let amount1 = new BigNumber.from(72327847929);
+      let amount2 = new BigNumber.from(34525623).mul(dec18).add(new BigNumber.from(1843334524523452));
+
+      // initially the recipient should have no TDrop
+      expect(await tdropToken.balanceOf(recipient1.address)).to.be.equal(0);
+      expect(await tdropToken.balanceOf(recipient2.address)).to.be.equal(0);
+
+      await tdropToken.connect(admin).setAirdropper(airdropper.address);
+      expect(await tdropToken.airdropper()).to.equal(airdropper.address);
+      expect(await tdropToken.totalSupply()).to.be.equal(new BigNumber.from(0));
+
+      // should airdrop correct amounts
+      await tdropToken.connect(airdropper).airdrop([recipient1.address, recipient2.address], [amount1, amount2]);
+      expect(await tdropToken.balanceOf(recipient1.address)).to.be.equal(amount1);
+      expect(await tdropToken.balanceOf(recipient2.address)).to.be.equal(amount2);      
+      expect(await tdropToken.totalSupply()).to.be.equal(new BigNumber.from(amount1).add(new BigNumber.from(amount2)));
+     
+      expect(await tdropToken.balanceInWholeCoin(recipient1.address)).to.be.equal(new BigNumber.from(0));
+      expect(await tdropToken.balanceInWholeCoin(recipient2.address)).to.be.equal(new BigNumber.from(34525623)); 
+    });
+
     it("Only the designated airdropper can airdrop tokens", async function () {
       let airdropper2 = addrs[2];
       let recipient1 = addrs[3];

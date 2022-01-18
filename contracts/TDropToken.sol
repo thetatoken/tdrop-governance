@@ -375,6 +375,15 @@ contract TDropToken {
     }
 
     /**
+     * @notice Get the number of tokens held by the `account` in the unit of "whole TDrop"
+     * @param account The address of the account to get the balance of
+     * @return The number of tokens held in the unit of "whole TDrop" without decimal places
+     */
+    function balanceInWholeCoin(address account) external view returns (uint) {
+        return SafeMath.div(balances[account], 1_000_000_000_000_000_000);
+    }
+
+    /**
      * @notice Transfer `amount` tokens from `msg.sender` to `dst`
      * @param dst The address of the destination account
      * @param rawAmount The number of tokens to transfer
